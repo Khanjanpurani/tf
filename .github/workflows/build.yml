@@ -8,63 +8,64 @@ on:
 jobs:
   build-windows-noavx:
     runs-on: windows-latest
-
     env:
-      ACTIONS_STEP_DEBUG: true  # Enable GitHub Actions debug logs
+      ACTIONS_STEP_DEBUG: true  # Debug logs
 
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Java 11 for Maven build (fixes --add-exports)
+      # 2️⃣ Setup Java 11
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '11'
 
-      # 3️⃣ Install Bazelisk via Chocolatey
+      # 3️⃣ Install Bazelisk
       - name: Install Bazelisk
         shell: powershell
         run: |
           choco install bazelisk -y
           bazelisk version
 
-      # 4️⃣ Set MSVC paths for Bazel (Windows C++ toolchain)
-      - name: Set Bazel MSVC toolchain
+      # 4️⃣ Set MSVC toolchain paths
+      - name: Configure MSVC toolchain for Bazel
         shell: pwsh
         run: |
-          $env:BAZEL_VC="C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC"
-          $env:BAZEL_WINSDK="C:\Program Files (x86)\Windows Kits\10"
+          # Visual Studio 2019 BuildTools path
+          $vc_path = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC"
+          $sdk_path = "C:\Program Files (x86)\Windows Kits\10"
+          if (-Not (Test-Path $vc_path)) { throw "VC path not found: $vc_path" }
+          if (-Not (Test-Path $sdk_path)) { throw "WinSDK path not found: $sdk_path" }
+
+          # Set Bazel env vars
+          $env:BAZEL_VC=$vc_path
+          $env:BAZEL_WINSDK=$sdk_path
           echo "BAZEL_VC = $env:BAZEL_VC"
           echo "BAZEL_WINSDK = $env:BAZEL_WINSDK"
 
-      # 5️⃣ Disable AVX flags in tensorflow.bazelrc
-      - name: Disable AVX in Bazel config
+      # 5️⃣ Disable AVX in tensorflow.bazelrc
+      - name: Disable AVX
         shell: bash
         run: |
-          echo "Patching tensorflow.bazelrc to disable AVX..."
           sed -i 's/--copt=\/arch:AVX/--copt=\/arch:SSE2/g' tensorflow.bazelrc || true
-          echo "After patching:"
-          grep "/arch" tensorflow.bazelrc || true
 
-      # 6️⃣ Build TensorFlow JNI (native library)
-      - name: Build TensorFlow JNI (no AVX)
+      # 6️⃣ Build JNI DLL
+      - name: Build JNI DLL
         shell: bash
         run: |
-          echo "Building TensorFlow JNI without AVX..."
-          bazelisk build --config=opt //tensorflow/java:libtensorflow_jni.dll --copt=-mno-avx --copt=-mno-avx2 --copt=-mno-fma || true
+          bazelisk build --config=opt //tensorflow/java:libtensorflow_jni.dll --copt=-mno-avx --copt=-mno-avx2 --copt=-mno-fma
 
-      # 7️⃣ Build TensorFlow Java JARs using Java 11
-      - name: Build TensorFlow Java JARs with Debug Logs
+      # 7️⃣ Build Java JARs
+      - name: Build TensorFlow Java JARs
         shell: pwsh
         run: |
-          echo "Running Maven build with Java 11..."
           java -version
           mvn clean install -pl tensorflow-core/tensorflow-core-api,tensorflow-core/tensorflow-core-native -DskipTests -Pwindows -Pnative-build -X
 
-      # 8️⃣ Upload build artifacts (.jar + .dll)
+      # 8️⃣ Upload artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

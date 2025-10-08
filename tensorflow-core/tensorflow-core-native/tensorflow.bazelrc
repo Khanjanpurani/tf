@@ -434,6 +434,15 @@ build:avx_linux --copt=-mavx
 build:avx_linux --host_copt=-mavx
 build:avx_win --copt=/arch:AVX
 
+# --- Disable AVX for compatibility with non-AVX CPUs ---
+build --copt=-mno-avx
+build --copt=-mno-avx2
+build --copt=-mno-fma
+build --host_copt=-mno-avx
+build --host_copt=-mno-avx2
+build --host_copt=-mno-fma
+
+
 # Use Clang-cl compiler on Windows
 build:win_clang --copt=/clang:-Weverything
 build:win_clang --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows-clang-cl

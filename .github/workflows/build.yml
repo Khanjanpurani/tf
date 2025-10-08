@@ -9,6 +9,9 @@ jobs:
   build-windows-noavx:
     runs-on: windows-latest
 
+    env:
+      ACTIONS_STEP_DEBUG: true  # Enable GitHub Actions debug logging
+
     steps:
       # 1️⃣ Checkout the code
       - name: Checkout code
@@ -45,14 +48,19 @@ jobs:
           bazelisk build --config=opt //tensorflow/java:libtensorflow_jni.dll --copt=-mno-avx --copt=-mno-avx2 --copt=-mno-fma || true
 
       # 6️⃣ Build TensorFlow Java JARs using Java 8
-      - name: Build TensorFlow Java JARs
+      - name: Build TensorFlow Java JARs with Debug Logs
         shell: pwsh
         run: |
-          echo "Running Maven build with Java 8..."
-          $env:JAVA_HOME="C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\8.0.372-10\x64"
+          echo "Setting JAVA_HOME to Java 8..."
+          setx JAVA_HOME "C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\8.0.462-8\x64" /M
+          $env:JAVA_HOME="C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\8.0.462-8\x64"
           $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
+          echo "Java version:"
           java -version
-          mvn clean install -pl tensorflow-core/tensorflow-core-api,tensorflow-core/tensorflow-core-native -DskipTests -Pwindows -Pnative-build
+          echo "Maven version:"
+          mvn -v
+          echo "Running Maven build with debug logs..."
+          mvn clean install -X -pl tensorflow-core/tensorflow-core-api,tensorflow-core/tensorflow-core-native -DskipTests -Pwindows -Pnative-build
 
       # 7️⃣ Upload build artifacts (.jar + .dll)
       - name: Upload build artifacts

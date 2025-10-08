@@ -10,22 +10,26 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # 1️⃣ Checkout the code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Java 8 for Maven build
       - name: Set up JDK 8
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '8'
 
-      - name: Install Chocolatey and Bazelisk
+      # 3️⃣ Install Bazelisk via Chocolatey
+      - name: Install Bazelisk
         shell: powershell
         run: |
           choco install bazelisk -y
           bazelisk version
 
-      - name: Disable AVX in tensorflow.bazelrc
+      # 4️⃣ Disable AVX flags in tensorflow.bazelrc
+      - name: Disable AVX in Bazel config
         shell: bash
         run: |
           echo "Patching tensorflow.bazelrc to disable AVX..."
@@ -33,22 +37,29 @@ jobs:
           echo "After patching:"
           grep "/arch" tensorflow.bazelrc || true
 
+      # 5️⃣ Build TensorFlow JNI (native library)
       - name: Build TensorFlow JNI (no AVX)
         shell: bash
         run: |
-          echo "Building TensorFlow JNI (no AVX)..."
-          bazelisk build --config=opt //tensorflow/java:libtensorflow_jni.so --copt=-mno-avx || true
+          echo "Building TensorFlow JNI without AVX..."
+          bazelisk build --config=opt //tensorflow/java:libtensorflow_jni.dll --copt=-mno-avx --copt=-mno-avx2 --copt=-mno-fma || true
 
+      # 6️⃣ Build TensorFlow Java JARs using Java 8
       - name: Build TensorFlow Java JARs
-        shell: bash
+        shell: pwsh
         run: |
-          echo "Running Maven build..."
+          echo "Running Maven build with Java 8..."
+          $env:JAVA_HOME="C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\8.0.372-10\x64"
+          $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
+          java -version
           mvn clean install -pl tensorflow-core/tensorflow-core-api,tensorflow-core/tensorflow-core-native -DskipTests -Pwindows -Pnative-build
 
-      - name: Upload JAR Artifacts
+      # 7️⃣ Upload build artifacts (.jar + .dll)
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tensorflow-java-noavx-jars
+          name: tensorflow-java-noavx
           path: |
             tensorflow-core/tensorflow-core-api/target/*.jar
             tensorflow-core/tensorflow-core-native/target/*.jar
+            bazel-bin/tensorflow/java/*.dll

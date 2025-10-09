@@ -1,83 +1,90 @@
-# name: Windows TensorFlow Java Native Build
+name: Windows TensorFlow Java Native Build
 
-# on:
-#   push:
-#     branches:
-#       - master
-#       - staging
-#   pull_request:
-#     branches:
-#       - master
-#       - staging
+on:
+  workflow_dispatch:
 
-# jobs:
-#   build-windows:
-#     runs-on: windows-2022
+jobs:
+  build-windows:
+    name: Build TensorFlow Java Native (Windows)
+    runs-on: windows-2022
 
-#     steps:
-#       - name: Checkout Repository
-#         uses: actions/checkout@v4
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-#       - name: Set up Java 17
-#         uses: actions/setup-java@v4
-#         with:
-#           distribution: 'temurin'
-#           java-version: '17'
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-#       - name: Install Build Tools
-#         shell: cmd
-#         run: |
-#           choco install -y git python --no-progress
-#           python -m pip install numpy six wheel
-#           git --version
-#           python --version
+      - name: Verify Java & Maven
+        shell: cmd
+        run: |
+          echo ===== Java & Maven Versions =====
+          java -version
+          mvn -version
 
-#       - name: Configure MSVC (cl)
-#         shell: cmd
-#         run: |
-#           echo Setting up Visual Studio environment...
-#           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
-#           cl
+      - name: Install Python + Git
+        shell: cmd
+        run: |
+          choco install -y git python --no-progress
+          python -m pip install numpy six wheel
+          python --version
+          git --version
 
-#       - name: Build TensorFlow Java + Native (with Maven)
-#         shell: cmd
-#         run: |
-#           echo ====== Setting Environment Variables ======
-#           set "PATH=C:\msys64\usr\bin;%PATH%"
-#           mkdir C:\tmp
-#           set "TMPDIR=C:\tmp"
-#           set "TEMP=C:\tmp"
-#           set "TMP=C:\tmp"
-#           set "TEST_TMPDIR=C:\tmp"
-          
-#           echo ====== Version Info ======
-#           java -version
-#           mvn -version
-#           echo ====== Building Native TensorFlow ======
-#           call mvn clean install -Pjdk17 -B -U -e ^
-#             -Djavacpp.platform=windows-x86_64 ^
-#             -Djavacpp.platform.extension= ^
-#             -Pnative ^
-#             -Djavacpp.cppbuild=true ^
-#             -Dmaven.test.skip=true ^
-#             -DskipTests=true ^
-#             -Djavacpp.platform.custom=windows-x86_64
-#           if ERRORLEVEL 1 exit /b 1
+      - name: Configure MSVC Build Environment
+        shell: cmd
+        run: |
+          echo ===== Configuring MSVC =====
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
+          cl
 
-#       - name: Verify Native Artifacts
-#         shell: cmd
-#         run: |
-#           echo ====== Build Artifacts ======
-#           dir tensorflow-core\tensorflow-core-api\target
-#           dir tensorflow-core\tensorflow-core-native\target
-#           echo ====== Native .dll/.pdb/.jar check ======
-#           dir tensorflow-core\tensorflow-core-native\target\native
+      - name: Prepare Environment for Bazel
+        shell: cmd
+        run: |
+          echo ===== Preparing TMP & Bazel Env =====
+          mkdir C:\tmp
+          setx TMPDIR "C:\tmp"
+          setx TEMP "C:\tmp"
+          setx TMP "C:\tmp"
+          setx TEST_TMPDIR "C:\tmp"
 
-#       - name: Upload Build Artifacts
-#         uses: actions/upload-artifact@v4
-#         with:
-#           name: tensorflow-java-native-windows
-#           path: |
-#             tensorflow-core/**/*.jar
-#             tensorflow-core/**/*.dll
-#             tensorflow-core/**/*.pdb
+      - name: Force Bazel to use Java 17
+        shell: cmd
+        run: |
+          echo ===== Forcing Bazel to use Java 17 =====
+          setx BAZEL_JAVA_HOME "%JAVA_HOME%"
+          setx JAVA_HOME "%JAVA_HOME%"
+          java -version
+
+      - name: Build TensorFlow Java Native (Bazel + Maven)
+        shell: cmd
+        run: |
+          echo ===== Building TensorFlow Java Native (Windows) =====
+          call mvn clean install ^
+            -Pnative-build ^
+            -Pwindows ^
+            -B -U -e ^
+            -Djavacpp.cppbuild=true ^
+            -Djavacpp.platform=windows-x86_64 ^
+            -Dmaven.test.skip=true ^
+            -DskipTests=true ^
+            -Djavacpp.platform.custom=windows-x86_64
+          if ERRORLEVEL 1 exit /b 1
+
+      - name: Verify Artifacts
+        shell: cmd
+        run: |
+          echo ===== Build Artifacts =====
+          dir tensorflow-core\tensorflow-core-api\target
+          dir tensorflow-core\tensorflow-core-native\target
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tensorflow-java-native-windows
+          path: |
+            tensorflow-core/**/*.jar
+            tensorflow-core/**/*.dll
+            tensorflow-core/**/*.pdb

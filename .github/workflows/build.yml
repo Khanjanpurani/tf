@@ -75,12 +75,25 @@ jobs:
         shell: cmd
         run: |
           echo ===== Bazel Info =====
+          set PATH=C:\bazel;%PATH%
+          set BAZEL_JAVA_HOME=%JAVA_HOME%
+          mkdir C:\tmp\dummy_ws
+          cd C:\tmp\dummy_ws
+          echo workspace(name = "dummy") > WORKSPACE
           bazel info java-home
+          cd ..
+          rmdir /s /q C:\tmp\dummy_ws
 
       - name: Build TensorFlow Java Native (Windows)
         shell: cmd
         run: |
           echo ===== Starting Native Build =====
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
+          set BAZEL_JAVA_HOME=%JAVA_HOME%
+          set TMPDIR=C:\tmp
+          set TEMP=C:\tmp
+          set TMP=C:\tmp
+          set TEST_TMPDIR=C:\tmp
           call mvn clean install ^
             -Pnative-build ^
             -Pwindows ^
@@ -88,6 +101,7 @@ jobs:
             -Djavacpp.cppbuild=true ^
             -Djavacpp.platform=windows-x86_64 ^
             -Djavacpp.platform.custom=windows-x86_64 ^
+            -Dbazel.executable=C:\bazel\bazel.exe ^
             -Dmaven.test.skip=true ^
             -DskipTests=true
           if ERRORLEVEL 1 exit /b 1

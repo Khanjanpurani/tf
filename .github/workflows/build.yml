@@ -53,10 +53,15 @@ jobs:
           set TMP=C:\tmp
           set TEST_TMPDIR=C:\tmp
 
-      - name: Setup Bazelisk
-        uses: bazelbuild/setup-bazelisk@v1
-        with:
-          version: 8.4.2
+      - name: Install Bazel 6.5.0
+        shell: cmd
+        run: |
+          echo ===== Installing Bazel 6.5.0 =====
+          mkdir C:\bazel
+          curl -Lo C:\bazel\bazel.exe https://github.com/bazelbuild/bazel/releases/download/6.5.0/bazel-6.5.0-windows-x86_64.exe
+          set PATH=C:\bazel;%PATH%
+          echo Bazel version:
+          bazel --version
 
       - name: Force Bazel to Use Java 17
         shell: cmd
@@ -76,7 +81,7 @@ jobs:
         shell: cmd
         run: |
           echo ===== Starting Native Build =====
-          mvn clean install ^
+          call mvn clean install ^
             -Pnative-build ^
             -Pwindows ^
             -B -U -e ^

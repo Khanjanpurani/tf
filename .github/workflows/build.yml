@@ -1,74 +1,74 @@
-name: Build TensorFlow Java with Bazel on Windows
+# name: Build TensorFlow Java with Bazel on Windows
 
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+# on:
+#   workflow_dispatch:
+#   push:
+#     branches:
+#       - main
 
-jobs:
-  build:
-    runs-on: windows-latest
+# jobs:
+#   build:
+#     runs-on: windows-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
 
-      - name: Set up Java 8
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 8
+#       - name: Set up Java 8
+#         uses: actions/setup-java@v4
+#         with:
+#           distribution: temurin
+#           java-version: 8
 
-      - name: Verify Java and Maven
-        run: |
-          echo "Java version:"
-          java -version
-          echo "Maven version:"
-          mvn -v
+#       - name: Verify Java and Maven
+#         run: |
+#           echo "Java version:"
+#           java -version
+#           echo "Maven version:"
+#           mvn -v
 
-      - name: Install Visual Studio 2019 Build Tools
-        run: |
-          choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive --norestart" -y
-          echo "Installed Visual Studio 2019 Build Tools"
-        shell: pwsh
+#       - name: Install Visual Studio 2019 Build Tools
+#         run: |
+#           choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive --norestart" -y
+#           echo "Installed Visual Studio 2019 Build Tools"
+#         shell: pwsh
 
-      - name: Set Visual Studio environment variables
-        shell: pwsh
-        run: |
-          echo "Setting Visual Studio environment variables..."
-          $vc_path = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC"
-          $vs_path = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools"
+#       - name: Set Visual Studio environment variables
+#         shell: pwsh
+#         run: |
+#           echo "Setting Visual Studio environment variables..."
+#           $vc_path = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC"
+#           $vs_path = "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools"
           
-          if (-Not (Test-Path $vc_path)) {
-            Write-Host "VC path not found at expected location. Searching for VC path..."
-            $found = Get-ChildItem "C:\Program Files (x86)\Microsoft Visual Studio" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "VC" } | Select-Object -First 1
-            if ($found) {
-              $vc_path = $found.FullName
-              Write-Host "Found VC path at: $vc_path"
-            } else {
-              throw "VC path not found anywhere under Visual Studio installation."
-            }
-          }
+#           if (-Not (Test-Path $vc_path)) {
+#             Write-Host "VC path not found at expected location. Searching for VC path..."
+#             $found = Get-ChildItem "C:\Program Files (x86)\Microsoft Visual Studio" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "VC" } | Select-Object -First 1
+#             if ($found) {
+#               $vc_path = $found.FullName
+#               Write-Host "Found VC path at: $vc_path"
+#             } else {
+#               throw "VC path not found anywhere under Visual Studio installation."
+#             }
+#           }
 
-          echo "Setting environment variables for Bazel..."
-          echo "VC_PATH=$vc_path"
-          echo "VS_PATH=$vs_path"
-          echo "BAZEL_VC=$vc_path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "BAZEL_VS=$vs_path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+#           echo "Setting environment variables for Bazel..."
+#           echo "VC_PATH=$vc_path"
+#           echo "VS_PATH=$vs_path"
+#           echo "BAZEL_VC=$vc_path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+#           echo "BAZEL_VS=$vs_path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+#           echo "BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Debug Bazel Environment
-        run: |
-          echo "BAZEL_VC: $env:BAZEL_VC"
-          echo "BAZEL_VS: $env:BAZEL_VS"
-          echo "Listing VC directory contents:"
-          dir "$env:BAZEL_VC"
-        shell: pwsh
+#       - name: Debug Bazel Environment
+#         run: |
+#           echo "BAZEL_VC: $env:BAZEL_VC"
+#           echo "BAZEL_VS: $env:BAZEL_VS"
+#           echo "Listing VC directory contents:"
+#           dir "$env:BAZEL_VC"
+#         shell: pwsh
 
-      - name: Build TensorFlow Java with Bazel (Debug)
-        run: |
-          echo "Starting Bazel build with debug logs..."
-          bazel --version
-          bazel build //tensorflow:tensorflow_cc --verbose_failures --sandbox_debug --experimental_generate_json_trace_profile
-        shell: pwsh
+#       - name: Build TensorFlow Java with Bazel (Debug)
+#         run: |
+#           echo "Starting Bazel build with debug logs..."
+#           bazel --version
+#           bazel build //tensorflow:tensorflow_cc --verbose_failures --sandbox_debug --experimental_generate_json_trace_profile
+#         shell: pwsh

@@ -27,13 +27,14 @@ jobs:
           java -version
           mvn -version
 
-      - name: Install Dependencies
+      - name: Install Dependencies (Python 3.12 + Git)
         shell: cmd
         run: |
-          choco install -y git python --no-progress
-          python -m pip install numpy six wheel
+          echo Installing Python 3.12 and Git
+          choco install -y python --version=3.12.0 git --no-progress
           python --version
           git --version
+          python -m pip install numpy six wheel
 
       - name: Configure MSVC Compiler
         shell: cmd
@@ -52,6 +53,15 @@ jobs:
           setx TMP "C:\tmp"
           setx TEST_TMPDIR "C:\tmp"
 
+      - name: Install Bazel 6.5.0
+        shell: cmd
+        run: |
+          echo ===== Installing Bazel 6.5.0 =====
+          curl -Lo C:\bazel-6.5.0-windows-x86_64.exe https://github.com/bazelbuild/bazel/releases/download/6.5.0/bazel-6.5.0-windows-x86_64.exe
+          setx PATH "C:\;%PATH%"
+          echo Bazel version:
+          C:\bazel-6.5.0-windows-x86_64.exe --version
+
       - name: Force Bazel to Use Java 17
         shell: cmd
         run: |
@@ -64,8 +74,7 @@ jobs:
         shell: cmd
         run: |
           echo ===== Bazel Info =====
-          bazel version
-          bazel info java-home
+          C:\bazel-6.5.0-windows-x86_64.exe info java-home
 
       - name: Build TensorFlow Java Native (Windows)
         shell: cmd
@@ -78,6 +87,7 @@ jobs:
             -Djavacpp.cppbuild=true ^
             -Djavacpp.platform=windows-x86_64 ^
             -Djavacpp.platform.custom=windows-x86_64 ^
+            -Dbazel.executable=C:\bazel-6.5.0-windows-x86_64.exe ^
             -Dmaven.test.skip=true ^
             -DskipTests=true
           if ERRORLEVEL 1 exit /b 1

@@ -1,4 +1,4 @@
-name: Windows TensorFlow Java Native Build
+name: Windows Tf Java Native Build
 
 on:
   workflow_dispatch:

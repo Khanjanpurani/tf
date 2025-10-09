@@ -12,6 +12,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
+          repository: 'tensorflow/java'
           ref: 'v1.0.0'
 
       - name: Set up Java 17

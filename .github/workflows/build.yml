@@ -1,4 +1,4 @@
-name: Windows Tf Java Native Build
+name: Windows Tef Java Native Build
 
 on:
   workflow_dispatch:

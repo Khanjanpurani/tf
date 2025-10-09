@@ -1,11 +1,11 @@
 name: Windows TensorFlow Java Native Build
 
 on:
-  workflow_dispatch:  # manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   build-windows:
-    name: Build TensorFlow Java (Native + Maven)
+    name: Build TensorFlow Java Native (Windows)
     runs-on: windows-2022
 
     steps:
@@ -18,53 +18,53 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Force Java 17 on PATH
+      - name: Verify Java & Maven
         shell: cmd
         run: |
-          echo ====== Forcing Java 17 ======
-          setx JAVA_HOME "%JAVA_HOME%"
-          setx PATH "%JAVA_HOME%\bin;%PATH%"
+          echo ===== Java & Maven Versions =====
           java -version
+          mvn -version
 
-      - name: Install Dependencies
+      - name: Install Python + Git
         shell: cmd
         run: |
-          echo Installing Python + tools...
           choco install -y git python --no-progress
           python -m pip install numpy six wheel
-          git --version
           python --version
+          git --version
 
-      - name: Configure MSVC Compiler
+      - name: Configure MSVC Build Environment
         shell: cmd
         run: |
-          echo Setting up MSVC environment...
+          echo ===== Configuring MSVC =====
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
           cl
 
-      - name: Verify Java Version (again)
+      - name: Prepare Environment for Bazel
         shell: cmd
         run: |
-          echo Java version check:
-          java -version
-          echo Maven version check:
-          mvn -version
-
-      - name: Build TensorFlow Java + Native
-        shell: cmd
-        run: |
-          echo ====== Preparing Build Environment ======
-          set "PATH=C:\msys64\usr\bin;%PATH%"
+          echo ===== Preparing TMP & Bazel Env =====
           mkdir C:\tmp
-          set "TMPDIR=C:\tmp"
-          set "TEMP=C:\tmp"
-          set "TMP=C:\tmp"
-          set "TEST_TMPDIR=C:\tmp"
+          setx TMPDIR "C:\tmp"
+          setx TEMP "C:\tmp"
+          setx TMP "C:\tmp"
+          setx TEST_TMPDIR "C:\tmp"
 
-          echo ====== Building TensorFlow Java Native ======
+      - name: Force Bazel to use Java 17
+        shell: cmd
+        run: |
+          echo ===== Forcing Bazel to use Java 17 =====
+          setx BAZEL_JAVA_HOME "%JAVA_HOME%"
+          setx JAVA_HOME "%JAVA_HOME%"
+          java -version
+
+      - name: Build TensorFlow Java Native (Bazel + Maven)
+        shell: cmd
+        run: |
+          echo ===== Building TensorFlow Java Native (Windows) =====
           call mvn clean install ^
-            -Pjdk17 ^
-            -Pnative ^
+            -Pnative-build ^
+            -Pwindows ^
             -B -U -e ^
             -Djavacpp.cppbuild=true ^
             -Djavacpp.platform=windows-x86_64 ^
@@ -76,11 +76,11 @@ jobs:
       - name: Verify Artifacts
         shell: cmd
         run: |
-          echo ====== Build Artifacts ======
+          echo ===== Build Artifacts =====
           dir tensorflow-core\tensorflow-core-api\target
           dir tensorflow-core\tensorflow-core-native\target
 
-      - name: Upload Build Artifacts
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tensorflow-java-native-windows

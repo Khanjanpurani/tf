@@ -1,17 +1,11 @@
 name: Windows TensorFlow Java Native Build
 
 on:
-  push:
-    branches:
-      - master
-      - staging
-  pull_request:
-    branches:
-      - master
-      - staging
+  workflow_dispatch:  # ✅ Allows manual trigger from the GitHub Actions UI
 
 jobs:
   build-windows:
+    name: Build TensorFlow Java (Native + Maven)
     runs-on: windows-2022
 
     steps:
@@ -24,53 +18,55 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install Build Tools
+      - name: Install Dependencies
         shell: cmd
         run: |
+          echo Installing dependencies...
           choco install -y git python --no-progress
           python -m pip install numpy six wheel
           git --version
           python --version
 
-      - name: Configure MSVC (cl)
+      - name: Configure MSVC Compiler
         shell: cmd
         run: |
           echo Setting up Visual Studio environment...
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
           cl
 
-      - name: Build TensorFlow Java + Native (with Maven)
+      - name: Build TensorFlow Java + Native
         shell: cmd
         run: |
-          echo ====== Setting Environment Variables ======
+          echo ====== Environment Setup ======
           set "PATH=C:\msys64\usr\bin;%PATH%"
           mkdir C:\tmp
           set "TMPDIR=C:\tmp"
           set "TEMP=C:\tmp"
           set "TMP=C:\tmp"
           set "TEST_TMPDIR=C:\tmp"
-          
+
           echo ====== Version Info ======
           java -version
           mvn -version
-          echo ====== Building Native TensorFlow ======
-          call mvn clean install -Pjdk17 -B -U -e ^
-            -Djavacpp.platform=windows-x86_64 ^
-            -Djavacpp.platform.extension= ^
+
+          echo ====== Starting TensorFlow Java Native Build ======
+          call mvn clean install ^
+            -Pjdk17 ^
             -Pnative ^
+            -B -U -e ^
             -Djavacpp.cppbuild=true ^
+            -Djavacpp.platform=windows-x86_64 ^
             -Dmaven.test.skip=true ^
             -DskipTests=true ^
             -Djavacpp.platform.custom=windows-x86_64
           if ERRORLEVEL 1 exit /b 1
 
-      - name: Verify Native Artifacts
+      - name: Verify Build Outputs
         shell: cmd
         run: |
-          echo ====== Build Artifacts ======
+          echo ====== Checking Build Artifacts ======
           dir tensorflow-core\tensorflow-core-api\target
           dir tensorflow-core\tensorflow-core-native\target
-          echo ====== Native .dll/.pdb/.jar check ======
           dir tensorflow-core\tensorflow-core-native\target\native
 
       - name: Upload Build Artifacts

@@ -92,7 +92,7 @@ jobs:
         run: |
           echo ===== Downloading and Patching nsync =====
           curl -Lo C:\nsync.tar.gz https://github.com/google/nsync/archive/refs/tags/1.24.0.tar.gz
-          python -c "import tarfile; import gzip; with gzip.open('C:/nsync.tar.gz', 'rb') as f_in: with tarfile.open(fileobj=f_in) as tar: tar.extractall(path='C:/')"
+          python -c "import tarfile; tarfile.open('C:/nsync.tar.gz').extractall(path='C:/')"
           set PATCHED_DIR=C:\nsync-1.24.0
           echo Patching %PATCHED_DIR%\public\nsync\platform\c++11\platform.h
           type NUL > %PATCHED_DIR%\temp.h

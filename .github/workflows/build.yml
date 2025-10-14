@@ -94,12 +94,12 @@ jobs:
           curl -Lo C:\nsync.tar.gz https://github.com/google/nsync/archive/refs/tags/1.24.0.tar.gz
           python -c "import tarfile; tarfile.open('C:/nsync.tar.gz').extractall(path='C:/tmp/')"
           set PATCHED_DIR=C:\tmp\nsync-1.24.0
-          echo Patching %PATCHED_DIR%\public\nsync\platform\c++11\platform.h
-          echo #include ^<chrono^> > %PATCHED_DIR%\public\nsync\platform\c++11\platform_fixed.h
-          type "%PATCHED_DIR%\public\nsync\platform\c++11\platform.h" >> %PATCHED_DIR%\public\nsync\platform\c++11\platform_fixed.h
-          move /Y "%PATCHED_DIR%\public\nsync\platform\c++11\platform_fixed.h" "%PATCHED_DIR%\public\nsync\platform\c++11\platform.h"
+          echo Patching %PATCHED_DIR%\platform\c++11\platform.h
+          echo #include ^<chrono^> > %PATCHED_DIR%\platform\c++11\platform_fixed.h
+          type "%PATCHED_DIR%\platform\c++11\platform.h" >> %PATCHED_DIR%\platform\c++11\platform_fixed.h
+          move /Y "%PATCHED_DIR%\platform\c++11\platform_fixed.h" "%PATCHED_DIR%\platform\c++11\platform.h"
           echo Patched file contents:
-          type "%PATCHED_DIR%\public\nsync\platform\c++11\platform.h" | findstr chrono
+          type "%PATCHED_DIR%\platform\c++11\platform.h" | findstr chrono
 
       - name: Build TensorFlow Java Native (Windows)
         shell: cmd

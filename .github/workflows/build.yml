@@ -1,7 +1,7 @@
 name: Windows TensorFlow Java Native Build
 
 on:
-  workflow_dispatch:  # manual trigger
+  workflow_dispatch:
 
 jobs:
   build-windows:
@@ -13,13 +13,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'tensorflow/java'
-          ref: 'v1.0.0'  # Uses TensorFlow 2.16.2
+          ref: 'v1.0.0'
 
       - name: Set up Java 11
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11'  # TF Java 1.0.0 requires Java 11
+          java-version: '11'
 
       - name: Install Python 3.10
         uses: actions/setup-python@v5
@@ -61,56 +61,46 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "===== Creating Bazel Configuration ====="
-          @"
-# Windows build configuration
-build --enable_platform_specific_config
-build:windows --cxxopt=/std:c++17
-build:windows --host_cxxopt=/std:c++17
-build:windows --copt=/D_USE_MATH_DEFINES
-build:windows --host_copt=/D_USE_MATH_DEFINES
-build:windows --copt=/DWIN32_LEAN_AND_MEAN
-build:windows --host_copt=/DWIN32_LEAN_AND_MEAN
-build:windows --copt=/wd4244
-build:windows --copt=/wd4267
-build:windows --copt=/wd4996
-build:windows --define=override_eigen_strong_inline=true
-
-# Resource limits
-build --jobs=2
-build --local_ram_resources=HOST_RAM*.5
-build --disk_cache=C:/bazel_cache
-
-# Reduce verbosity
-build --show_progress_rate_limit=30
-"@ | Out-File -FilePath .bazelrc.user -Encoding utf8
+          $bazelConfig = @'
+          # Windows build configuration
+          build --enable_platform_specific_config
+          build:windows --cxxopt=/std:c++17
+          build:windows --host_cxxopt=/std:c++17
+          build:windows --copt=/D_USE_MATH_DEFINES
+          build:windows --host_copt=/D_USE_MATH_DEFINES
+          build:windows --copt=/DWIN32_LEAN_AND_MEAN
+          build:windows --host_copt=/DWIN32_LEAN_AND_MEAN
+          build:windows --copt=/wd4244
+          build:windows --copt=/wd4267
+          build:windows --copt=/wd4996
+          build:windows --define=override_eigen_strong_inline=true
+          
+          # Resource limits
+          build --jobs=2
+          build --local_ram_resources=HOST_RAM*.5
+          build --disk_cache=C:/bazel_cache
+          
+          # Reduce verbosity
+          build --show_progress_rate_limit=30
+          '@
+          $bazelConfig | Out-File -FilePath .bazelrc.user -Encoding utf8
 
       - name: Set Environment Variables
         shell: pwsh
         run: |
           Write-Host "===== Setting Environment Variables ====="
-          $env:BAZEL_SH = "C:\msys64\usr\bin\bash.exe"
-          $env:BAZEL_VS = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
-          $env:BAZEL_VC = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC"
-          $env:PYTHON_BIN_PATH = (Get-Command python).Source
-          $env:TMPDIR = "C:\buildtmp"
-          $env:TEMP = "C:\buildtmp"
-          $env:TMP = "C:\buildtmp"
-          $env:TEST_TMPDIR = "C:\buildtmp"
-          
-          # Add to GitHub environment for subsequent steps
-          "BAZEL_SH=C:\msys64\usr\bin\bash.exe" >> $env:GITHUB_ENV
-          "BAZEL_VS=C:\Program Files\Microsoft Visual Studio\2022\Enterprise" >> $env:GITHUB_ENV
-          "BAZEL_VC=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC" >> $env:GITHUB_ENV
-          "PYTHON_BIN_PATH=$((Get-Command python).Source)" >> $env:GITHUB_ENV
-          "TMPDIR=C:\buildtmp" >> $env:GITHUB_ENV
-          "TEMP=C:\buildtmp" >> $env:GITHUB_ENV
-          "TMP=C:\buildtmp" >> $env:GITHUB_ENV
-          "TEST_TMPDIR=C:\buildtmp" >> $env:GITHUB_ENV
-          
-          Write-Host "Environment configured:"
+          $pythonPath = (Get-Command python).Source
+          "BAZEL_SH=C:\msys64\usr\bin\bash.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "BAZEL_VS=C:\Program Files\Microsoft Visual Studio\2022\Enterprise" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "BAZEL_VC=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "PYTHON_BIN_PATH=$pythonPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "TMPDIR=C:\buildtmp" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "TEMP=C:\buildtmp" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "TMP=C:\buildtmp" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "TEST_TMPDIR=C:\buildtmp" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Environment configured"
           Write-Host "JAVA_HOME: $env:JAVA_HOME"
-          Write-Host "PYTHON: $((Get-Command python).Source)"
-          Write-Host "BAZEL_SH: C:\msys64\usr\bin\bash.exe"
+          Write-Host "PYTHON: $pythonPath"
 
       - name: Verify Tools
         shell: pwsh
@@ -126,55 +116,37 @@ build --show_progress_rate_limit=30
         run: |
           echo ===== Starting Maven Build =====
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
-          
           echo Setting environment variables...
           set BAZEL_JAVA_HOME=%JAVA_HOME%
-          set BAZEL_SH=C:\msys64\usr\bin\bash.exe
-          set BAZEL_VS=C:\Program Files\Microsoft Visual Studio\2022\Enterprise
-          set BAZEL_VC=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC
+          set BAZEL_SH=%BAZEL_SH%
+          set BAZEL_VS=%BAZEL_VS%
+          set BAZEL_VC=%BAZEL_VC%
           set PYTHON_BIN_PATH=%PYTHON_BIN_PATH%
-          set TMPDIR=C:\buildtmp
-          set TEMP=C:\buildtmp
-          set TMP=C:\buildtmp
-          set TEST_TMPDIR=C:\buildtmp
-          
+          set TMPDIR=%TMPDIR%
+          set TEMP=%TEMP%
+          set TMP=%TMP%
+          set TEST_TMPDIR=%TEST_TMPDIR%
           echo Starting Maven build...
-          call mvn clean package ^
-            -Pnative-build ^
-            -Pwindows ^
-            -B -U ^
-            -Djavacpp.cppbuild=true ^
-            -Djavacpp.platform=windows-x86_64 ^
-            -Djavacpp.platform.custom=windows-x86_64 ^
-            -DskipTests=true ^
-            -Dmaven.wagon.http.retryHandler.count=5 ^
-            -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 ^
-            -Dhttp.keepAlive=false
-          
+          call mvn clean package -Pnative-build -Pwindows -B -U -Djavacpp.cppbuild=true -Djavacpp.platform=windows-x86_64 -Djavacpp.platform.custom=windows-x86_64 -DskipTests=true -Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 -Dhttp.keepAlive=false
           if errorlevel 1 (
             echo Build failed with error code %errorlevel%
             exit /b 1
           )
-          
           echo Build completed successfully!
 
       - name: Verify Build Artifacts
         shell: pwsh
         run: |
           Write-Host "===== Verifying Build Artifacts ====="
-          
           $paths = @(
             "tensorflow-core\tensorflow-core-api\target",
             "tensorflow-core\tensorflow-core-native\target",
             "tensorflow-core\tensorflow-core-native\target\native"
           )
-          
           foreach ($path in $paths) {
             if (Test-Path $path) {
               Write-Host "`nContents of $path:"
-              Get-ChildItem -Path $path -Recurse -File | 
-                Where-Object { $_.Extension -in @('.jar', '.dll', '.pdb') } |
-                Format-Table Name, Length, LastWriteTime -AutoSize
+              Get-ChildItem -Path $path -Recurse -File | Where-Object { $_.Extension -in @('.jar', '.dll', '.pdb') } | Format-Table Name, Length, LastWriteTime -AutoSize
             } else {
               Write-Host "Warning: Path not found: $path"
             }
